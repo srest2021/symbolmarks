@@ -6,13 +6,25 @@ interface WalkNode {
 	path: string[];
 }
 
-/** Depth-first walk of the document symbol tree, yielding each node with its full path. */
-function* walk(symbols: vscode.DocumentSymbol[], prefix: string[] = []): Generator<WalkNode> {
-	for (const sym of symbols) {
-		const path = [...prefix, sym.name];
-		yield { sym, path };
-		yield* walk(sym.children ?? [], path);
+/**
+ * Innermost symbol whose range contains `position`, with its full path.
+ *
+ * Descends the tree one level at a time. When several sibling ranges contain the
+ * point (e.g. two test methods with an identical line), the one that *starts
+ * latest* is the real encloser — so we don't drift to an earlier same-named sibling.
+ */
+function innermostAt(
+	symbols: vscode.DocumentSymbol[],
+	position: vscode.Position,
+	prefix: string[] = [],
+): WalkNode | undefined {
+	const containing = symbols.filter(s => s.range.contains(position));
+	if (containing.length === 0) {
+		return undefined;
 	}
+	const sym = containing.sort((a, b) => b.range.start.compareTo(a.range.start))[0];
+	const path = [...prefix, sym.name];
+	return innermostAt(sym.children ?? [], position, path) ?? { sym, path };
 }
 
 async function getDocumentSymbols(uri: vscode.Uri): Promise<vscode.DocumentSymbol[]> {
@@ -49,40 +61,36 @@ export async function describeAnchor(
 	position: vscode.Position,
 ): Promise<Pick<Bookmark, 'anchorType' | 'symbolPath' | 'symbolKind' | 'tokenText' | 'lineText' | 'lineOffset' | 'label'>> {
 	const symbols = await getDocumentSymbols(document.uri);
-	const nodes = [...walk(symbols)];
+	const enclosing = innermostAt(symbols, position);
 
 	// Token under the cursor (identifier) and the full line, used for re-finding.
 	const wordRange = document.getWordRangeAtPosition(position);
 	const tokenText = wordRange ? document.getText(wordRange) : undefined;
 	const lineText = document.lineAt(position.line).text.trim();
 
-	// 1. Cursor on a declaration name?
-	const onName = nodes.find(n => n.sym.selectionRange.contains(position));
-	if (onName) {
+	// 1. Cursor on the symbol's own name?
+	if (enclosing && enclosing.sym.selectionRange.contains(position)) {
 		return {
 			anchorType: 'symbol',
-			symbolPath: onName.path,
-			symbolKind: onName.sym.kind,
+			symbolPath: enclosing.path,
+			symbolKind: enclosing.sym.kind,
 			tokenText,
 			lineText,
-			label: onName.path.join(' › '),
+			label: enclosing.path.join(' › '),
 		};
 	}
 
-	// 2. Cursor inside a symbol body — pick the deepest containing symbol.
-	const containing = nodes
-		.filter(n => n.sym.range.contains(position))
-		.sort((a, b) => b.path.length - a.path.length)[0];
-	if (containing) {
-		const enclosingName = containing.path[containing.path.length - 1];
+	// 2. Cursor inside a symbol body.
+	if (enclosing) {
+		const enclosingName = enclosing.path[enclosing.path.length - 1];
 		const hint = lineText || tokenText;
 		return {
 			anchorType: 'lineInSymbol',
-			symbolPath: containing.path,
-			symbolKind: containing.sym.kind,
+			symbolPath: enclosing.path,
+			symbolKind: enclosing.sym.kind,
 			tokenText,
 			lineText,
-			lineOffset: position.line - containing.sym.range.start.line,
+			lineOffset: position.line - enclosing.sym.range.start.line,
 			label: `${(hint || 'line').slice(0, 50)} — in ${enclosingName}`,
 		};
 	}
