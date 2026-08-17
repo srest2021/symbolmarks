@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { randomUUID } from 'node:crypto';
-import { Bookmark } from './types';
+import { Bookmark, Group } from './types';
 import { BookmarkStore } from './storage';
-import { BookmarksProvider } from './tree';
+import { BookmarksProvider, Node, isBookmark } from './tree';
 import { describeAnchor, resolveBookmark } from './symbols';
 
 export function activate(context: vscode.ExtensionContext) {
@@ -35,9 +35,20 @@ export function activate(context: vscode.ExtensionContext) {
 		};
 		const existing = store.findDuplicate(entry);
 		if (existing) {
-			vscode.window.showWarningMessage(`Already bookmarked: ${existing.label}`);
-			await view.reveal(existing, { select: true, focus: false });
-			return;
+			const choice = await vscode.window.showWarningMessage(
+				`Already bookmarked: ${existing.label}`,
+				{ modal: true },
+				'Add Anyway',
+				'Reveal Existing',
+			);
+			if (choice === 'Reveal Existing') {
+				await view.reveal(existing, { select: true, focus: true });
+				return;
+			}
+			if (choice !== 'Add Anyway') {
+				return; // dismissed
+			}
+			// fall through to add a second copy
 		}
 		await store.add(entry);
 		provider.refresh();
@@ -48,7 +59,11 @@ export function activate(context: vscode.ExtensionContext) {
 	const jump = vscode.commands.registerCommand('symbolmarks.jump', async (target: Bookmark) => {
 		try {
 			const { uri, range, stale } = await resolveBookmark(target);
-			const editor = await vscode.window.showTextDocument(uri, { preview: false });
+			// preserveFocus: keep focus in the tree so cmd+↑/↓ can reorder right after clicking.
+			const editor = await vscode.window.showTextDocument(uri, {
+				preview: false,
+				preserveFocus: true,
+			});
 			editor.selection = new vscode.Selection(range.start, range.start);
 			editor.revealRange(range, vscode.TextEditorRevealType.InCenter);
 			if (stale) {
@@ -115,7 +130,98 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	});
 
-	context.subscriptions.push(bookmark, jump, remove, rename, toggleSort, clearAll);
+	// --- folders (groups) ---
+
+	const newGroup = vscode.commands.registerCommand('symbolmarks.newGroup', async () => {
+		await createGroup(undefined);
+	});
+
+	const newSubgroup = vscode.commands.registerCommand(
+		'symbolmarks.newSubgroup',
+		async (parent: Group) => {
+			if (parent) {
+				await createGroup(parent.id);
+			}
+		},
+	);
+
+	async function createGroup(parentId: string | undefined): Promise<void> {
+		const name = await vscode.window.showInputBox({ prompt: 'Folder name' });
+		if (!name?.trim()) {
+			return;
+		}
+		await store.addGroup({ id: randomUUID(), name: name.trim(), parentId, order: 0 });
+		await store.setSortMode('manual');
+		provider.refresh();
+	}
+
+	const renameGroup = vscode.commands.registerCommand(
+		'symbolmarks.renameGroup',
+		async (target: Group) => {
+			if (!target) {
+				return;
+			}
+			const name = await vscode.window.showInputBox({ prompt: 'Folder name', value: target.name });
+			if (!name?.trim()) {
+				return;
+			}
+			await store.renameGroup(target.id, name.trim());
+			provider.refresh();
+		},
+	);
+
+	const deleteGroup = vscode.commands.registerCommand(
+		'symbolmarks.deleteGroup',
+		async (target: Group) => {
+			if (!target) {
+				return;
+			}
+			await store.removeGroup(target.id);
+			provider.refresh();
+		},
+	);
+
+	// --- move up / down (keyboard + context menu) ---
+
+	const move = async (arg: Node | undefined, dir: -1 | 1) => {
+		const node = arg ?? view.selection[0];
+		if (!node) {
+			vscode.window.showInformationMessage('Symbolmarks: select an item first, then move it.');
+			return;
+		}
+		await store.moveNode(node.id, dir);
+		await store.setSortMode('manual');
+		provider.refresh();
+		// Re-select the moved node (fetch a fresh copy so reveal can find it).
+		const fresh: Node | undefined = isBookmark(node)
+			? store.all().find(b => b.id === node.id)
+			: store.groups().find(g => g.id === node.id);
+		if (fresh) {
+			try {
+				await view.reveal(fresh, { select: true, focus: true });
+			} catch {
+				/* reveal is best-effort */
+			}
+		}
+	};
+
+	const moveUp = vscode.commands.registerCommand('symbolmarks.moveUp', arg => move(arg, -1));
+	const moveDown = vscode.commands.registerCommand('symbolmarks.moveDown', arg => move(arg, 1));
+
+	context.subscriptions.push(
+		bookmark,
+		jump,
+		remove,
+		rename,
+		toggleSort,
+		clearAll,
+		newGroup,
+		newSubgroup,
+		renameGroup,
+		deleteGroup,
+		moveUp,
+		moveDown,
+	);
 }
 
 export function deactivate() {}

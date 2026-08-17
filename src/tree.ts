@@ -1,16 +1,23 @@
 import * as vscode from 'vscode';
-import { Bookmark } from './types';
+import { Bookmark, Group } from './types';
 import { BookmarkStore } from './storage';
 import { locationLabel } from './symbols';
 
 const MIME = 'application/vnd.code.tree.symbolmarks';
 
+export type Node = Group | Bookmark;
+
+export function isBookmark(node: Node): node is Bookmark {
+	return 'anchorType' in node;
+}
+
+function displayName(node: Node): string {
+	return isBookmark(node) ? node.title?.trim() || node.label : node.name;
+}
+
 /** Map a SymbolKind to a codicon so tree items look like the Outline view. */
 function iconFor(bookmark: Bookmark): vscode.ThemeIcon {
-	if (bookmark.anchorType === 'rawLine') {
-		return new vscode.ThemeIcon('bookmark');
-	}
-	if (bookmark.anchorType === 'lineInSymbol') {
+	if (bookmark.anchorType === 'rawLine' || bookmark.anchorType === 'lineInSymbol') {
 		return new vscode.ThemeIcon('arrow-small-right');
 	}
 	switch (bookmark.symbolKind) {
@@ -39,7 +46,7 @@ function iconFor(bookmark: Bookmark): vscode.ThemeIcon {
 }
 
 export class BookmarksProvider
-	implements vscode.TreeDataProvider<Bookmark>, vscode.TreeDragAndDropController<Bookmark>
+	implements vscode.TreeDataProvider<Node>, vscode.TreeDragAndDropController<Node>
 {
 	private readonly _onDidChangeTreeData = new vscode.EventEmitter<void>();
 	readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
@@ -53,14 +60,29 @@ export class BookmarksProvider
 		this._onDidChangeTreeData.fire();
 	}
 
-	getTreeItem(bookmark: Bookmark): vscode.TreeItem {
+	getTreeItem(node: Node): vscode.TreeItem {
+		return isBookmark(node) ? this.bookmarkItem(node) : this.groupItem(node);
+	}
+
+	private groupItem(group: Group): vscode.TreeItem {
+		const item = new vscode.TreeItem(group.name, vscode.TreeItemCollapsibleState.Expanded);
+		item.id = group.id;
+		item.description = `(${this.store.all().filter(b => b.groupId === group.id).length +
+			this.store.groups().filter(g => g.parentId === group.id).length})`;
+		item.iconPath = vscode.ThemeIcon.Folder;
+		// Whether another subfolder may still be nested here — drives the context menu.
+		item.contextValue = this.store.canNestUnder(group.id) ? 'group.nestable' : 'group.leaf';
+		item.tooltip = group.name;
+		return item;
+	}
+
+	private bookmarkItem(bookmark: Bookmark): vscode.TreeItem {
 		const hasTitle = !!bookmark.title && bookmark.title.trim().length > 0;
 		const item = new vscode.TreeItem(
 			hasTitle ? bookmark.title! : bookmark.label,
 			vscode.TreeItemCollapsibleState.None,
 		);
 		item.id = bookmark.id;
-		// With a title, keep the derived symbol descriptor visible in the dimmed text.
 		item.description = hasTitle
 			? `${bookmark.label} · ${locationLabel(bookmark)}`
 			: locationLabel(bookmark);
@@ -83,46 +105,50 @@ export class BookmarksProvider
 		return item;
 	}
 
-	getParent(): vscode.ProviderResult<Bookmark> {
-		// Flat tree — every item is a root.
-		return undefined;
+	getParent(node: Node): Node | undefined {
+		const parentId = isBookmark(node) ? node.groupId : node.parentId;
+		return parentId ? this.store.groups().find(g => g.id === parentId) : undefined;
 	}
 
-	getChildren(): Bookmark[] {
-		const list = [...this.store.all()];
-		if (this.store.sortMode() === 'alpha') {
-			const name = (b: Bookmark) => b.title?.trim() || b.label;
-			return list.sort((a, b) => name(a).localeCompare(name(b)));
+	getChildren(element?: Node): Node[] {
+		if (element && isBookmark(element)) {
+			return [];
 		}
-		return list.sort((a, b) => a.order - b.order);
+		const parent = element?.id; // undefined at root
+		const kids: Node[] = [
+			...this.store.groups().filter(g => g.parentId === parent),
+			...this.store.all().filter(b => b.groupId === parent),
+		];
+		if (this.store.sortMode() === 'alpha') {
+			return kids.sort((a, b) => displayName(a).localeCompare(displayName(b)));
+		}
+		return kids.sort((a, b) => a.order - b.order);
 	}
 
-	// --- drag & drop (custom/manual reordering) ---
+	// --- drag & drop: move nodes into a folder / to root ---
 
-	handleDrag(source: readonly Bookmark[], dataTransfer: vscode.DataTransfer): void {
-		dataTransfer.set(MIME, new vscode.DataTransferItem(source.map(b => b.id)));
+	handleDrag(source: readonly Node[], dataTransfer: vscode.DataTransfer): void {
+		dataTransfer.set(MIME, new vscode.DataTransferItem(source.map(n => n.id)));
 	}
 
-	async handleDrop(target: Bookmark | undefined, dataTransfer: vscode.DataTransfer): Promise<void> {
+	async handleDrop(target: Node | undefined, dataTransfer: vscode.DataTransfer): Promise<void> {
 		const transferItem = dataTransfer.get(MIME);
 		if (!transferItem) {
 			return;
 		}
-		const draggedIds: string[] = transferItem.value;
+		const ids = transferItem.value as string[];
 
-		// Reorder against the current *manual* order.
-		let list = [...this.store.all()].sort((a, b) => a.order - b.order);
-		const dragged = draggedIds
-			.map(id => list.find(b => b.id === id))
-			.filter((b): b is Bookmark => b !== undefined);
-		list = list.filter(b => !draggedIds.includes(b.id));
+		// Dropped on a folder → into it; on a bookmark → into its folder, before it;
+		// on empty space → root.
+		const destParent = target ? (isBookmark(target) ? target.groupId : target.id) : undefined;
+		const beforeId = target && isBookmark(target) ? target.id : undefined;
 
-		const targetIdx = target ? list.findIndex(b => b.id === target.id) : list.length;
-		list.splice(targetIdx < 0 ? list.length : targetIdx, 0, ...dragged);
-		list.forEach((b, i) => (b.order = i));
-
-		await this.store.replaceAll(list);
-		// Reordering only makes sense in manual mode — switch to it.
+		const { blocked } = await this.store.moveInto(ids, destParent, beforeId);
+		if (blocked) {
+			vscode.window.showWarningMessage(
+				`Symbolmarks: move blocked — would exceed ${this.store.maxGroupDepth()} folder levels.`,
+			);
+		}
 		await this.store.setSortMode('manual');
 		this.refresh();
 	}

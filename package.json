@@ -32,13 +32,13 @@
     "viewsWelcome": [
       {
         "view": "symbolmarks.view",
-        "contents": "No bookmarks yet.\nPlace your cursor on a symbol or line and run Bookmark Symbol Under Cursor (⌘⌥K)."
+        "contents": "No bookmarks yet.\nPlace your cursor on a symbol or line and run Bookmark Symbol (⌘⌥K)."
       }
     ],
     "commands": [
       {
         "command": "symbolmarks.bookmark",
-        "title": "Bookmark Symbol Under Cursor",
+        "title": "Bookmark Symbol",
         "category": "Symbolmarks"
       },
       {
@@ -68,6 +68,42 @@
         "command": "symbolmarks.clearAll",
         "title": "Clear All Bookmarks",
         "category": "Symbolmarks"
+      },
+      {
+        "command": "symbolmarks.newGroup",
+        "title": "New Folder",
+        "category": "Symbolmarks",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "symbolmarks.newSubgroup",
+        "title": "New Subfolder",
+        "category": "Symbolmarks",
+        "icon": "$(new-folder)"
+      },
+      {
+        "command": "symbolmarks.renameGroup",
+        "title": "Rename Folder",
+        "category": "Symbolmarks",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "symbolmarks.deleteGroup",
+        "title": "Delete Folder",
+        "category": "Symbolmarks",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "symbolmarks.moveUp",
+        "title": "Move Up",
+        "category": "Symbolmarks",
+        "icon": "$(arrow-up)"
+      },
+      {
+        "command": "symbolmarks.moveDown",
+        "title": "Move Down",
+        "category": "Symbolmarks",
+        "icon": "$(arrow-down)"
       }
     ],
     "menus": {
@@ -83,6 +119,26 @@
         {
           "command": "symbolmarks.rename",
           "when": "false"
+        },
+        {
+          "command": "symbolmarks.newSubgroup",
+          "when": "false"
+        },
+        {
+          "command": "symbolmarks.renameGroup",
+          "when": "false"
+        },
+        {
+          "command": "symbolmarks.deleteGroup",
+          "when": "false"
+        },
+        {
+          "command": "symbolmarks.moveUp",
+          "when": "false"
+        },
+        {
+          "command": "symbolmarks.moveDown",
+          "when": "false"
         }
       ],
       "editor/context": [
@@ -93,6 +149,11 @@
         }
       ],
       "view/title": [
+        {
+          "command": "symbolmarks.newGroup",
+          "when": "view == symbolmarks.view",
+          "group": "navigation@0"
+        },
         {
           "command": "symbolmarks.toggleSort",
           "when": "view == symbolmarks.view",
@@ -106,16 +167,52 @@
       ],
       "view/item/context": [
         {
+          "command": "symbolmarks.newSubgroup",
+          "when": "view == symbolmarks.view && viewItem == group.nestable",
+          "group": "inline@1"
+        },
+        {
+          "command": "symbolmarks.renameGroup",
+          "when": "view == symbolmarks.view && viewItem =~ /^group/",
+          "group": "inline@2"
+        },
+        {
+          "command": "symbolmarks.deleteGroup",
+          "when": "view == symbolmarks.view && viewItem =~ /^group/",
+          "group": "inline@3"
+        },
+        {
           "command": "symbolmarks.rename",
-          "when": "view == symbolmarks.view",
+          "when": "view == symbolmarks.view && viewItem == symbolmark",
           "group": "inline@1"
         },
         {
           "command": "symbolmarks.remove",
-          "when": "view == symbolmarks.view",
+          "when": "view == symbolmarks.view && viewItem == symbolmark",
           "group": "inline@2"
+        },
+        {
+          "command": "symbolmarks.moveUp",
+          "when": "view == symbolmarks.view",
+          "group": "2_move@1"
+        },
+        {
+          "command": "symbolmarks.moveDown",
+          "when": "view == symbolmarks.view",
+          "group": "2_move@2"
         }
       ]
+    },
+    "configuration": {
+      "title": "Symbolmarks",
+      "properties": {
+        "symbolmarks.maxGroupDepth": {
+          "type": "number",
+          "default": 3,
+          "minimum": 1,
+          "description": "Maximum number of nested folder levels."
+        }
+      }
     },
     "keybindings": [
       {
@@ -123,6 +220,18 @@
         "key": "ctrl+alt+k",
         "mac": "cmd+alt+k",
         "when": "editorTextFocus"
+      },
+      {
+        "command": "symbolmarks.moveUp",
+        "key": "alt+up",
+        "mac": "cmd+up",
+        "when": "focusedView == symbolmarks.view"
+      },
+      {
+        "command": "symbolmarks.moveDown",
+        "key": "alt+down",
+        "mac": "cmd+down",
+        "when": "focusedView == symbolmarks.view"
       }
     ]
   },

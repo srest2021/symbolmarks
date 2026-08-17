@@ -38,7 +38,19 @@ export interface Bookmark {
 	/** Last-known absolute position, used as a final fallback. */
 	fallbackLine: number;
 	fallbackChar: number;
-	/** Explicit order for manual (custom) sort. */
+	/** Position among its siblings (groups and bookmarks share one sequence per folder). */
+	order: number;
+	/** Containing group id, or undefined at the root. */
+	groupId?: string;
+}
+
+/** A folder that holds bookmarks and/or nested folders. */
+export interface Group {
+	id: string;
+	name: string;
+	/** Parent group id, or undefined for a top-level folder. */
+	parentId?: string;
+	/** Position among its siblings (groups and bookmarks share one sequence per folder). */
 	order: number;
 }
 
