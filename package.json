@@ -2,7 +2,7 @@
   "name": "symbolmarks",
   "displayName": "symbolmarks",
   "description": "Symbol bookmarks",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "local",
   "engines": {
     "vscode": "^1.125.0"
@@ -26,7 +26,7 @@
       "symbolmarks": [
         {
           "id": "symbolmarks.view",
-          "name": "Bookmarks"
+          "name": "Symbolmarks"
         }
       ]
     },
