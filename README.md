@@ -56,27 +56,8 @@ npx @vscode/vsce package --allow-missing-repository   # → symbolmarks-<version
 ```
 
 The output filename matches the `version` in `package.json` (e.g. `symbolmarks-0.0.2.vsix`).
-To iterate, open the folder in VS Code and press `F5` to launch an Extension
-Development Host.
-
-### Installing your own build
-
-```bash
-code --install-extension symbolmarks-0.0.2.vsix --force   # --force overwrites the same version
-```
-
-Then reload the window (**Developer: Reload Window**). If you change the view/container
-**title**, a reload isn't enough — bump `version` in `package.json`, repackage, and
-reinstall so the editor re-reads the manifest.
-
-> **Which editor does `code` target?** The `code` command may be symlinked to
-> Cursor, VSCodium, or VS Code depending on what you installed last. Check with
-> `readlink $(which code)`. To install into VS Code specifically, use its own CLI:
->
-> ```bash
-> "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" \
->   --install-extension symbolmarks-0.0.2.vsix --force
-> ```
+Install it with the command in the section above. To iterate without packaging, open
+the folder in VS Code and press `F5` to launch an Extension Development Host.
 
 ## Publishing (optional)
 
