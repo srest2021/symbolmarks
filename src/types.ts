@@ -18,8 +18,10 @@ export type AnchorType = 'symbol' | 'lineInSymbol' | 'rawLine';
 export interface Bookmark {
 	/** Stable unique id. */
 	id: string;
-	/** User-facing label shown in the tree (defaults derived, renamable). */
+	/** Auto-derived descriptor of what's bookmarked, e.g. "OrderService › processRefund". */
 	label: string;
+	/** Optional user-supplied title, shown above/before the derived label. */
+	title?: string;
 	/** Target document, stored as a Uri string. */
 	uri: string;
 	anchorType: AnchorType;

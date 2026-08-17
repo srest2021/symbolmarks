@@ -54,10 +54,25 @@ export class BookmarksProvider
 	}
 
 	getTreeItem(bookmark: Bookmark): vscode.TreeItem {
-		const item = new vscode.TreeItem(bookmark.label, vscode.TreeItemCollapsibleState.None);
+		const hasTitle = !!bookmark.title && bookmark.title.trim().length > 0;
+		const item = new vscode.TreeItem(
+			hasTitle ? bookmark.title! : bookmark.label,
+			vscode.TreeItemCollapsibleState.None,
+		);
 		item.id = bookmark.id;
-		item.description = locationLabel(bookmark);
-		item.tooltip = `${bookmark.symbolPath.join(' › ') || bookmark.label}\n${locationLabel(bookmark)}`;
+		// With a title, keep the derived symbol descriptor visible in the dimmed text.
+		item.description = hasTitle
+			? `${bookmark.label} · ${locationLabel(bookmark)}`
+			: locationLabel(bookmark);
+		item.tooltip = new vscode.MarkdownString(
+			[
+				hasTitle ? `**${bookmark.title}**` : undefined,
+				bookmark.symbolPath.join(' › ') || bookmark.label,
+				`\`${locationLabel(bookmark)}\``,
+			]
+				.filter(Boolean)
+				.join('\n\n'),
+		);
 		item.iconPath = iconFor(bookmark);
 		item.contextValue = 'symbolmark';
 		item.command = {
@@ -76,7 +91,8 @@ export class BookmarksProvider
 	getChildren(): Bookmark[] {
 		const list = [...this.store.all()];
 		if (this.store.sortMode() === 'alpha') {
-			return list.sort((a, b) => a.label.localeCompare(b.label));
+			const name = (b: Bookmark) => b.title?.trim() || b.label;
+			return list.sort((a, b) => name(a).localeCompare(name(b)));
 		}
 		return list.sort((a, b) => a.order - b.order);
 	}

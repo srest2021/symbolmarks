@@ -75,14 +75,17 @@ export function activate(context: vscode.ExtensionContext) {
 		if (!target) {
 			return;
 		}
-		const label = await vscode.window.showInputBox({
-			prompt: 'Rename bookmark',
-			value: target.label,
+		const title = await vscode.window.showInputBox({
+			prompt: 'Bookmark title (leave empty to use the symbol name)',
+			value: target.title ?? '',
+			placeHolder: target.label,
 		});
-		if (label !== undefined && label.trim().length > 0) {
-			await store.update(target.id, { label: label.trim() });
-			provider.refresh();
+		if (title === undefined) {
+			return; // cancelled
 		}
+		// Empty clears the custom title and reverts to the derived label.
+		await store.update(target.id, { title: title.trim() || undefined });
+		provider.refresh();
 	});
 
 	// Toggle between alphabetical and manual (custom) sort.
