@@ -3,6 +3,7 @@
   "displayName": "symbolmarks",
   "description": "Symbol bookmarks",
   "version": "0.0.1",
+  "publisher": "local",
   "engines": {
     "vscode": "^1.125.0"
   },

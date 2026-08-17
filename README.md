@@ -1,71 +1,66 @@
-# symbolmarks README
+# symbolmarks
 
-This is the README for your extension "symbolmarks". After writing up a brief description, we recommend including the following sections.
+Bookmark **symbols** — not just line numbers. Put your cursor on a class, function,
+call site, or plain line and Symbolmarks anchors to it by its place in the symbol
+tree, so the bookmark survives edits and moves. Organize bookmarks into nested
+folders and reorder everything from the keyboard.
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+- **Symbol-aware bookmarks.** Anchors to the enclosing symbol (`OrderService › processRefund`), a line inside a symbol, or a raw line — and re-resolves on click even after the code moves.
+- **Folders.** Group bookmarks into nested folders (up to 3 levels by default).
+- **Keyboard reordering.** Move any symbol or folder up/down; at the edge of a folder it pops out one level.
+- **Drag & drop.** Drop onto a folder to move into it, onto a symbol to drop just before it, or onto empty space to move to the root.
+- **Sort toggle.** Switch between manual order and alphabetical.
 
-For example if there is an image subfolder under your extension project workspace:
+## Usage
 
-\!\[feature X\]\(images/feature-x.png\)
+| Action | Shortcut |
+| --- | --- |
+| Bookmark the symbol/line under the cursor | `⌘⌥K` (mac) · `Ctrl+Alt+K` |
+| Move selected item up / down (view focused) | `⌘↑` / `⌘↓` (mac) · `Alt+↑` / `Alt+↓` |
+| New folder | title-bar button |
+| Rename / delete / new subfolder | hover a folder row |
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+Click a bookmark to jump to it — focus stays in the sidebar so you can immediately reorder with `⌘↑`/`⌘↓`.
 
-## Requirements
+## Settings
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+- `symbolmarks.maxGroupDepth` (default `3`) — maximum number of nested folder levels.
 
-## Extension Settings
+## Install (for others)
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+No Marketplace account needed. You install a packaged `.vsix` file — get it either
+by **building it** (see below) or by **downloading it from a GitHub Release**.
 
-For example:
+Once you have the file:
 
-This extension contributes the following settings:
+```bash
+code --install-extension symbolmarks-0.0.1.vsix
+```
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+Or in VS Code: **Extensions** panel → `⋯` menu → **Install from VSIX…**
 
-## Known Issues
+To share the file with teammates, attach the `.vsix` to a
+[GitHub Release](https://docs.github.com/en/repositories/releasing-projects-on-github)
+(or just send them the file directly) — don't add it to the repo.
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+## Build & package from source
 
-## Release Notes
+```bash
+npm install
+npm run package                          # type-check, lint, production bundle
+npx @vscode/vsce package --allow-missing-repository   # → symbolmarks-0.0.1.vsix
+```
 
-Users appreciate release notes as you update your extension.
+Then install the generated `.vsix` with the command above. To iterate, open the
+folder in VS Code and press `F5` to launch an Extension Development Host.
 
-### 1.0.0
+## Publishing (optional)
 
-Initial release of ...
+If you later want a one-click install for everyone:
 
-### 1.0.1
+- **VS Code Marketplace** — create a publisher at <https://marketplace.visualstudio.com/manage>, get an Azure DevOps Personal Access Token, then `npx @vscode/vsce publish`.
+- **Open VSX** (used by VSCodium/Cursor/etc.) — `npx ovsx publish symbolmarks-0.0.1.vsix -p <token>`.
 
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+Both read metadata from `package.json`; set a real `publisher`, `repository`, and bump `version` before publishing.
