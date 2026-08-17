@@ -12,10 +12,117 @@
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "symbolmarks",
+          "title": "Symbolmarks",
+          "icon": "media/bookmark.svg"
+        }
+      ]
+    },
+    "views": {
+      "symbolmarks": [
+        {
+          "id": "symbolmarks.view",
+          "name": "Bookmarks"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "symbolmarks.view",
+        "contents": "No bookmarks yet.\nPlace your cursor on a symbol or line and run Bookmark Symbol Under Cursor (⌘⌥K)."
+      }
+    ],
     "commands": [
       {
-        "command": "symbolmarks.helloWorld",
-        "title": "Hello World"
+        "command": "symbolmarks.bookmark",
+        "title": "Bookmark Symbol Under Cursor",
+        "category": "Symbolmarks"
+      },
+      {
+        "command": "symbolmarks.jump",
+        "title": "Jump to Bookmark",
+        "category": "Symbolmarks"
+      },
+      {
+        "command": "symbolmarks.remove",
+        "title": "Remove Bookmark",
+        "category": "Symbolmarks",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "symbolmarks.rename",
+        "title": "Rename Bookmark",
+        "category": "Symbolmarks",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "symbolmarks.toggleSort",
+        "title": "Toggle Sort Order",
+        "category": "Symbolmarks",
+        "icon": "$(sort-precedence)"
+      },
+      {
+        "command": "symbolmarks.clearAll",
+        "title": "Clear All Bookmarks",
+        "category": "Symbolmarks"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "symbolmarks.jump",
+          "when": "false"
+        },
+        {
+          "command": "symbolmarks.remove",
+          "when": "false"
+        },
+        {
+          "command": "symbolmarks.rename",
+          "when": "false"
+        }
+      ],
+      "editor/context": [
+        {
+          "command": "symbolmarks.bookmark",
+          "when": "editorTextFocus",
+          "group": "navigation@99"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "symbolmarks.toggleSort",
+          "when": "view == symbolmarks.view",
+          "group": "navigation@1"
+        },
+        {
+          "command": "symbolmarks.clearAll",
+          "when": "view == symbolmarks.view",
+          "group": "1_actions"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "symbolmarks.rename",
+          "when": "view == symbolmarks.view",
+          "group": "inline@1"
+        },
+        {
+          "command": "symbolmarks.remove",
+          "when": "view == symbolmarks.view",
+          "group": "inline@2"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "symbolmarks.bookmark",
+        "key": "ctrl+alt+k",
+        "mac": "cmd+alt+k",
+        "when": "editorTextFocus"
       }
     ]
   },
