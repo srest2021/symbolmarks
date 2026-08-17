@@ -47,17 +47,14 @@ To share the file with teammates, attach the `.vsix` to a
 
 ## Build & package from source
 
-These are the exact commands used to produce the `.vsix`:
-
 ```bash
 npm install
 npm run package                                       # type-check, lint, production bundle
 npx @vscode/vsce package --allow-missing-repository   # → symbolmarks-<version>.vsix
 ```
 
-The output filename matches the `version` in `package.json` (e.g. `symbolmarks-0.0.2.vsix`).
-Install it with the command in the section above. To iterate without packaging, open
-the folder in VS Code and press `F5` to launch an Extension Development Host.
+To iterate without packaging, open the folder in VS Code and press `F5` to launch an
+Extension Development Host.
 
 ## Publishing (optional)
 
