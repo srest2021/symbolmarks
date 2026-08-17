@@ -23,20 +23,30 @@ export class BookmarkStore {
 	constructor(private readonly context: vscode.ExtensionContext) {}
 
 	// --- reads ---
+	//
+	// workspaceState.get() deserializes the whole list on every call, and a single
+	// tree render calls all()/groups() many times (getChildren, per-item getTreeItem,
+	// and the recursive depth helpers). We cache the parsed arrays and refresh the
+	// cache on every write, so a render parses storage at most once.
+
+	private bookmarksCache?: Bookmark[];
+	private groupsCache?: Group[];
 
 	all(): Bookmark[] {
-		return this.context.workspaceState.get<Bookmark[]>(BOOKMARKS_KEY, []);
+		return (this.bookmarksCache ??= this.context.workspaceState.get<Bookmark[]>(BOOKMARKS_KEY, []));
 	}
 
 	groups(): Group[] {
-		return this.context.workspaceState.get<Group[]>(GROUPS_KEY, []);
+		return (this.groupsCache ??= this.context.workspaceState.get<Group[]>(GROUPS_KEY, []));
 	}
 
 	private async persist(list: Bookmark[]): Promise<void> {
+		this.bookmarksCache = list;
 		await this.context.workspaceState.update(BOOKMARKS_KEY, list);
 	}
 
 	private async persistGroups(list: Group[]): Promise<void> {
+		this.groupsCache = list;
 		await this.context.workspaceState.update(GROUPS_KEY, list);
 	}
 
