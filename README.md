@@ -36,7 +36,7 @@ by **building it** (see below) or by **downloading it from a GitHub Release**.
 Once you have the file:
 
 ```bash
-code --install-extension symbolmarks-0.0.1.vsix
+code --install-extension symbolmarks-0.0.2.vsix
 ```
 
 Or in VS Code: **Extensions** panel → `⋯` menu → **Install from VSIX…**
@@ -47,20 +47,42 @@ To share the file with teammates, attach the `.vsix` to a
 
 ## Build & package from source
 
+These are the exact commands used to produce the `.vsix`:
+
 ```bash
 npm install
-npm run package                          # type-check, lint, production bundle
-npx @vscode/vsce package --allow-missing-repository   # → symbolmarks-0.0.1.vsix
+npm run package                                       # type-check, lint, production bundle
+npx @vscode/vsce package --allow-missing-repository   # → symbolmarks-<version>.vsix
 ```
 
-Then install the generated `.vsix` with the command above. To iterate, open the
-folder in VS Code and press `F5` to launch an Extension Development Host.
+The output filename matches the `version` in `package.json` (e.g. `symbolmarks-0.0.2.vsix`).
+To iterate, open the folder in VS Code and press `F5` to launch an Extension
+Development Host.
+
+### Installing your own build
+
+```bash
+code --install-extension symbolmarks-0.0.2.vsix --force   # --force overwrites the same version
+```
+
+Then reload the window (**Developer: Reload Window**). If you change the view/container
+**title**, a reload isn't enough — bump `version` in `package.json`, repackage, and
+reinstall so the editor re-reads the manifest.
+
+> **Which editor does `code` target?** The `code` command may be symlinked to
+> Cursor, VSCodium, or VS Code depending on what you installed last. Check with
+> `readlink $(which code)`. To install into VS Code specifically, use its own CLI:
+>
+> ```bash
+> "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" \
+>   --install-extension symbolmarks-0.0.2.vsix --force
+> ```
 
 ## Publishing (optional)
 
 If you later want a one-click install for everyone:
 
 - **VS Code Marketplace** — create a publisher at <https://marketplace.visualstudio.com/manage>, get an Azure DevOps Personal Access Token, then `npx @vscode/vsce publish`.
-- **Open VSX** (used by VSCodium/Cursor/etc.) — `npx ovsx publish symbolmarks-0.0.1.vsix -p <token>`.
+- **Open VSX** (used by VSCodium/Cursor/etc.) — `npx ovsx publish symbolmarks-0.0.2.vsix -p <token>`.
 
 Both read metadata from `package.json`; set a real `publisher`, `repository`, and bump `version` before publishing.
